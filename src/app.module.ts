@@ -18,7 +18,6 @@ import { AbilityModule } from './ability/ability.module';
 import { MailModule } from './mail/mail.module';
 import { ApplicationModule } from './modules/application/application.module';
 import { AdminModule } from './modules/admin/admin.module';
-import { ChatModule } from './modules/chat/chat.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { PrometheusModule } from './prometheus/prometheus.module';
 import { RepositoryModule } from './common/repository/repository.module';
@@ -75,7 +74,6 @@ import { RepositoryModule } from './common/repository/repository.module';
     MailModule,
     ApplicationModule,
     AdminModule,
-    ChatModule,
     PaymentModule,
     PrometheusModule,
   ],
