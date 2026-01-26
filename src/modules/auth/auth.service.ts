@@ -83,12 +83,10 @@ export class AuthService {
     name,
     email,
     password,
-    type,
   }: {
     name: string;
     email: string;
     password: string;
-    type?: string;
   }) {
     try {
       // Check if email already exist
@@ -108,7 +106,7 @@ export class AuthService {
         name: name,
         email: email,
         password: password,
-        type: type,
+        type: 'client',
       });
 
       if (user == null && user.success == false) {
@@ -169,7 +167,6 @@ export class AuthService {
 
       const payload = { email: email, sub: userId, type: user?.type };
 
-
       const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
       const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
@@ -178,7 +175,7 @@ export class AuthService {
         `refresh_token:${user.id}`,
         refreshToken,
         'EX',
-        60 * 60 * 24 * 7, // 7 days in seconds
+        60 * 60 * 24 * 7, 
       );
 
       return {

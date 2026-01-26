@@ -54,18 +54,15 @@ export class AuthController {
   @Post('register')
   async create(@Body() data: CreateUserDto) {
     try {
+     
       const name = data.name;
       const email = data.email;
       const password = data.password;
-      const type = data.type;
-
-      if (!name) {
-        throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
-      }
 
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
       }
+      
       if (!password) {
         throw new HttpException(
           'Password not provided',
@@ -77,7 +74,6 @@ export class AuthController {
         name: name,
         email: email,
         password: password,
-        type: type,
       });
 
       return response;
