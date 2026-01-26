@@ -66,6 +66,23 @@ export default () => ({
     stripe: {
       secret_key: process.env.STRIPE_SECRET_KEY,
       webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+      prices: {
+        core: {
+          monthly: process.env.STRIPE_PRICE_CORE_MONTHLY,
+          semiannual: process.env.STRIPE_PRICE_CORE_SEMIANNUAL,
+          annual: process.env.STRIPE_PRICE_CORE_ANNUAL,
+        },
+        growth: {
+          monthly: process.env.STRIPE_PRICE_GROWTH_MONTHLY,
+          semiannual: process.env.STRIPE_PRICE_GROWTH_SEMIANNUAL,
+          annual: process.env.STRIPE_PRICE_GROWTH_ANNUAL,
+        },
+        plus: {
+          monthly: process.env.STRIPE_PRICE_PLUS_MONTHLY,
+          semiannual: process.env.STRIPE_PRICE_PLUS_SEMIANNUAL,
+          annual: process.env.STRIPE_PRICE_PLUS_ANNUAL,
+        },
+      },
     },
     paypal: {
       client_id: process.env.PAYPAL_CLIENT_ID,
