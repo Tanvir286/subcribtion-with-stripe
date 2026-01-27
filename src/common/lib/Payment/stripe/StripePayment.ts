@@ -1,8 +1,8 @@
-import stripe from 'stripe';
-import * as fs from 'fs';
-import appConfig from '../../../../config/app.config';
-import { Fetch } from '../../Fetch';
-import * as dotenv from 'dotenv';
+  import stripe from 'stripe';
+  import * as fs from 'fs';
+  import appConfig from '../../../../config/app.config';
+  import { Fetch } from '../../Fetch';
+  import * as dotenv from 'dotenv';
 dotenv.config();
 
 const STRIPE_SECRET_KEY = appConfig().payment.stripe.secret_key;
@@ -16,6 +16,24 @@ const STRIPE_WEBHOOK_SECRET = appConfig().payment.stripe.webhook_secret;
  * Stripe payment method helper
  */
 export class StripePayment {
+  /**
+   * Create a Stripe subscription for a customer
+   */
+  static async createSubscription({
+    customerId,
+    priceId,
+  }: {
+    customerId: string;
+    priceId: string;
+  }) {
+    return await Stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      expand: ['latest_invoice.payment_intent'],
+    });
+  }
+
   static async createPaymentMethod({
     card,
     billing_details,

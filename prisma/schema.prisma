@@ -116,7 +116,8 @@ model User {
   role_users             RoleUser[]
   payment_transactions   PaymentTransaction[]
   subscriptions          Subscription[]
-
+  
+  @@index([billing_id])
   @@map("users")
 }
 
@@ -347,6 +348,8 @@ model Subscription {
 
   //auto_renew
   auto_renew Boolean @default(true)
+
+  
   
   // Relations
   user_id String?
