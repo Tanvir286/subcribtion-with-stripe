@@ -1,19 +1,19 @@
 export function getStripePrice(plan: string, interval: string) {
   return {
     CORE: {
-      MONTHLY: process.env.STRIPE_PRICE_CORE_MONTHLY,
-      SEMIANNUAL: process.env.STRIPE_PRICE_CORE_SEMIANNUAL,
-      ANNUAL: process.env.STRIPE_PRICE_CORE_ANNUAL,
+      MONTHLY: 409,
+      SEMIANNUAL:327,
+      ANNUAL: 266
     },
     GROWTH: {
-      MONTHLY: process.env.STRIPE_PRICE_GROWTH_MONTHLY,
-      SEMIANNUAL: process.env.STRIPE_PRICE_GROWTH_SEMIANNUAL,
-      ANNUAL: process.env.STRIPE_PRICE_GROWTH_ANNUAL,
+      MONTHLY: 582,
+      SEMIANNUAL: 466,
+      ANNUAL: 378
     },
     PLUS: {
-      MONTHLY: process.env.STRIPE_PRICE_PLUS_MONTHLY,
-      SEMIANNUAL: process.env.STRIPE_PRICE_PLUS_SEMIANNUAL,
-      ANNUAL: process.env.STRIPE_PRICE_PLUS_ANNUAL,
+      MONTHLY: 820,
+      SEMIANNUAL: 656,
+      ANNUAL: 533
     },
   }[plan][interval];
 }

@@ -331,8 +331,6 @@ model Subscription {
   deleted_at DateTime?
 
   // Stripe
-  stripe_subscription_id String @unique
-  stripe_customer_id     String
   stripe_price_id        String
 
   // Plan Info
@@ -343,14 +341,9 @@ model Subscription {
   // Dates
   current_period_start DateTime
   current_period_end   DateTime
+
   trial_ends_at        DateTime?
-  canceled_at          DateTime?
 
-  //auto_renew
-  auto_renew Boolean @default(true)
-
-  
-  
   // Relations
   user_id String?
   user    User? @relation(fields: [user_id], references: [id])
@@ -360,3 +353,5 @@ model Subscription {
   @@index([user_id, status])
   @@map("subscriptions")
 }
+
+

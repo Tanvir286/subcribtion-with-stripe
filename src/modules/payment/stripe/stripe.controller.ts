@@ -1,16 +1,26 @@
-import { Controller, Post, Req, Headers, Body, UseGuards } from '@nestjs/common';
-import Stripe from 'stripe';
+import {
+  Controller,
+  Post,
+  Req,
+  Headers,
+  UseGuards,
+  Body,
+  Param,
+  NotFoundException,
+  ForbiddenException,
+  InternalServerErrorException,
+  Query,
+} from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { Request } from 'express';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { getStripePrice } from 'src/common/repository/StripeBalanceInfo/stripe.repository';
-import { StripePayment } from 'src/common/lib/Payment/stripe/StripePayment';
-import appConfig from 'src/config/app.config';
+import { TransactionRepository } from '../../../common/repository/transaction/transaction.repository';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
-
-const stripeClient = new Stripe(appConfig().payment.stripe.secret_key, {
-  apiVersion: '2025-03-31.basil',
-});
+import { StripePayment } from 'src/common/lib/Payment/stripe/StripePayment';
+import { Stripe } from 'stripe';
+import { getStripePrice } from 'src/common/repository/StripeBalanceInfo/stripe.repository';
+import { find } from 'rxjs';
+import { isThisMinute } from 'date-fns';
 
 @Controller('payment/stripe')
 export class StripeController {
@@ -19,66 +29,47 @@ export class StripeController {
     private readonly prisma: PrismaService,
   ) {}
 
+  // =====================================================================
+  // ========================== PAYMENT CREATE ============================
+  // =====================================================================
+
+  @Post('subscription')
   @UseGuards(JwtAuthGuard)
-  @Post('subscribe')
-  async subscribe(@Req() req, @Body() body) {
+  async createSubscription(@Body() body: any, @Req() req: any) {
     const user = req.user.userId;
 
-    let { plan, interval } = body;
+    const { plan, interval } = body;
 
-    plan = plan.toUpperCase();
-    interval = interval.toUpperCase();
+    let find_price = await getStripePrice(plan, interval);
 
-    const priceId = getStripePrice(plan, interval);
-    
-    if (!priceId) {
-      throw new Error(`Invalid plan or interval: ${plan} - ${interval}`);
+    if (!find_price) {
+      throw new NotFoundException(
+        'Price not found for the given plan and interval',
+      );
     }
 
-    const userinfo = await this.prisma.user.findUnique({
+    let users = await this.prisma.user.findUnique({
       where: { id: user },
     });
 
-    let customerId = userinfo.billing_id;
-
-    if (!customerId) {
-      // Create Stripe Customer
-      const customer = await StripePayment.createCustomer({
-        user_id: userinfo.id,
-        email: userinfo.email,
-        name: userinfo.name,
-      });
-
-      customerId = customer.id;
-      // Update user with billing_id
-      await this.prisma.user.update({
-        where: { id: userinfo.id },
-        data: { billing_id: customerId },
-      });
+    if (!users.billing_id) {
+      throw new NotFoundException('not create stripe account');
     }
 
-    const subscription = await stripeClient.subscriptions.create({
-      customer: customerId,
-      items: [{ price: priceId }],
-      payment_behavior: 'default_incomplete',
-      expand: ['latest_invoice.payment_intent'],
-      metadata: {
-        user_id: user,
-        plan,
-        interval,
-      },
-    });
+    const customerId = users.billing_id;
 
-    const invoice = subscription.latest_invoice as Stripe.Invoice;
-    const paymentIntent = (invoice as any)
-      .payment_intent as Stripe.PaymentIntent;
+    const amountInCents = Math.round(find_price * 100);
 
-    return {
-      subscriptionId: subscription.id,
-      clientSecret: paymentIntent?.client_secret,
-      status: subscription.status,
-    };
+     
+    
+
+     
+
+    
+
   }
+
+  // Implement subscription creation logic here
 
   @Post('webhook')
   async handleWebhook(
@@ -86,72 +77,53 @@ export class StripeController {
     @Req() req: Request,
   ) {
     try {
-      const payload = req.rawBody?.toString() ?? '';
+      const payload = req.rawBody.toString();
       const event = await this.stripeService.handleWebhook(payload, signature);
 
+      if (!event.data || !event.data.object) return { received: true };
+
+      const pi = event.data.object as Stripe.PaymentIntent;
+      const meta = pi.metadata || {};
+
       switch (event.type) {
-        case 'invoice.payment_succeeded': {
-          const invoice = event.data.object as Stripe.Invoice;
-          const subscriptionId = (invoice as any).subscription as string;
-
-          const stripeSubscription: any =
-            await stripeClient.subscriptions.retrieve(subscriptionId);
-
-          const userId = stripeSubscription.metadata.user_id;
-
-          await this.prisma.subscription.upsert({
-            where: {
-              stripe_subscription_id: stripeSubscription.id,
-            },
-            update: {
-              status: stripeSubscription.status.toUpperCase() as any,
-              current_period_start: new Date(
-                stripeSubscription.current_period_start * 1000,
-              ),
-              current_period_end: new Date(
-                stripeSubscription.current_period_end * 1000,
-              ),
-            },
-            create: {
-              stripe_subscription_id: stripeSubscription.id,
-              stripe_customer_id: stripeSubscription.customer as string,
-              stripe_price_id: stripeSubscription.items.data[0].price.id,
-              plan: stripeSubscription.metadata.plan as any,
-              interval: stripeSubscription.metadata.interval as any,
-              status: stripeSubscription.status.toUpperCase() as any,
-              current_period_start: new Date(
-                stripeSubscription.current_period_start * 1000,
-              ),
-              current_period_end: new Date(
-                stripeSubscription.current_period_end * 1000,
-              ),
-              user_id: userId,
-            },
-          });
-
+        case 'payment_intent.succeeded':
           break;
-        }
 
-        case 'customer.subscription.deleted': {
-          const subscription = event.data.object as Stripe.Subscription;
-
-          await this.prisma.subscription.update({
-            where: {
-              stripe_subscription_id: subscription.id,
-            },
-            data: {
-              status: 'CANCELED',
-              canceled_at: new Date(),
-            },
-          });
+        case 'payment_intent.payment_failed':
           break;
-        }
+
+        case 'payment_intent.canceled':
+          break;
+
+        case 'payment_intent.requires_action':
+          break;
+
+        default:
+          console.log(`Unhandled event type ${event.type}`);
       }
 
       return { received: true };
     } catch (error) {
       console.error('Webhook error', error);
-      throw error;
+      return { received: false };
     }
+  }
+
+  // =====================================================================
+  // ======================= UTILITY RESPONSE METHODS ===================
+  // =====================================================================
+
+  private fail(message: string) {
+    return { success: false, message };
+  }
+
+  private error(err: any) {
+    console.error('PAYMENT ERROR:', err);
+
+    return {
+      success: false,
+      message: err?.message ?? 'Payment failed',
+      details: err?.response ?? null,
+    };
   }
 }
