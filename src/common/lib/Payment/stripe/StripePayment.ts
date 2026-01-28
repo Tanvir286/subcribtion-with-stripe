@@ -1,13 +1,30 @@
-import stripe from "stripe";
-import * as fs from "fs";
-import StripePkg from "stripe";
-import appConfig from "../../../../config/app.config";
-import { Fetch } from "../../Fetch";
+import stripe from 'stripe';
+import * as fs from 'fs';
+import StripePkg from 'stripe';
+import appConfig from '../../../../config/app.config';
+import { Fetch } from '../../Fetch';
 
-const STRIPE_SECRET_KEY = appConfig().payment.stripe.secret_key;
+let stripeInstance: InstanceType<typeof StripePkg> | null = null;
 
-export const Stripe = new StripePkg(STRIPE_SECRET_KEY, {
-  apiVersion: "2025-03-31.basil",
+export function getStripe(): InstanceType<typeof StripePkg> {
+  if (!stripeInstance) {
+    const STRIPE_SECRET_KEY = appConfig().payment.stripe.secret_key;
+    if (!STRIPE_SECRET_KEY) {
+      throw new Error(
+        'STRIPE_SECRET_KEY is not configured in environment variables',
+      );
+    }
+    stripeInstance = new StripePkg(STRIPE_SECRET_KEY, {
+      apiVersion: '2025-03-31.basil',
+    });
+  }
+  return stripeInstance;
+}
+
+export const Stripe = new Proxy({} as InstanceType<typeof StripePkg>, {
+  get: (target, prop) => {
+    return getStripe()[prop as keyof InstanceType<typeof StripePkg>];
+  },
 });
 
 const STRIPE_WEBHOOK_SECRET = appConfig().payment.stripe.webhook_secret;
@@ -54,7 +71,7 @@ export class StripePayment {
       metadata: {
         user_id: user_id,
       },
-      description: "New Customer",
+      description: 'New Customer',
     });
     return customer;
   }
@@ -161,14 +178,14 @@ export class StripePayment {
     const cancel_url = `${appConfig().app.url}/failed`;
 
     const session = await Stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
+      mode: 'payment',
+      payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
-            currency: "usd",
+            currency: 'usd',
             product_data: {
-              name: "Sample Product",
+              name: 'Sample Product',
             },
             unit_amount: 2000, // $20.00
           },
@@ -199,8 +216,8 @@ export class StripePayment {
     const cancel_url = `${appConfig().app.url}/failed`;
 
     const session = await Stripe.checkout.sessions.create({
-      mode: "subscription",
-      payment_method_types: ["card"],
+      mode: 'subscription',
+      payment_method_types: ['card'],
       customer: customer,
       line_items: [
         {
@@ -238,8 +255,8 @@ export class StripePayment {
       line_items: [
         {
           amount: amount * 100,
-          tax_behavior: "exclusive",
-          reference: "tax_calculation",
+          tax_behavior: 'exclusive',
+          reference: 'tax_calculation',
         },
       ],
     });
@@ -252,7 +269,7 @@ export class StripePayment {
   ): Promise<stripe.Tax.Transaction> {
     const taxTransaction = await Stripe.tax.transactions.createFromCalculation({
       calculation: tax_calculation,
-      reference: "tax_transaction",
+      reference: 'tax_transaction',
     });
     return taxTransaction;
   }
@@ -275,11 +292,11 @@ export class StripePayment {
 
     if (invoice.hosted_invoice_url) {
       const response = await Fetch.get(invoice.hosted_invoice_url, {
-        responseType: "stream",
+        responseType: 'stream',
       });
 
       // save the response to a file
-      return fs.writeFileSync("receipt.pdf", response.data);
+      return fs.writeFileSync('receipt.pdf', response.data);
     } else {
       return null;
     }
@@ -295,9 +312,9 @@ export class StripePayment {
 
   static async createConnectedAccount(email: string) {
     const connectedAccount = await Stripe.accounts.create({
-      type: "custom",
+      type: 'custom',
       email: email,
-      country: "US", // change as per user's country
+      country: 'US', // change as per user's country
       // business_profile: {
       //   url: appConfig().app.url,
       // },
@@ -337,12 +354,12 @@ export class StripePayment {
         account: account_id,
         refresh_url: `${clientUrl}/payout/refresh`, // onboarding fail হলে
         return_url: `${clientUrl}/payout/success`, // onboarding success হলে
-        type: "account_onboarding",
+        type: 'account_onboarding',
       });
 
       return accountLink;
     } catch (error) {
-      console.error("Stripe Onboarding Link Error:", error);
+      console.error('Stripe Onboarding Link Error:', error);
       throw error;
     }
   }
@@ -401,12 +418,12 @@ export class StripePayment {
   static async createToken() {
     const token = await Stripe.tokens.create({
       bank_account: {
-        country: "US",
-        currency: "usd",
-        routing_number: "110000000",
-        account_number: "000123456789",
-        account_holder_name: "Jane Doe",
-        account_holder_type: "individual",
+        country: 'US',
+        currency: 'usd',
+        routing_number: '110000000',
+        account_number: '000123456789',
+        account_holder_name: 'Jane Doe',
+        account_holder_type: 'individual',
       },
     });
     return token;
@@ -432,12 +449,12 @@ export class StripePayment {
   static async createACHPaymentIntent(customerId: string, amount: number) {
     return await Stripe.paymentIntents.create({
       amount: amount * 100,
-      currency: "usd",
+      currency: 'usd',
       customer: customerId,
-      payment_method_types: ["us_bank_account"],
+      payment_method_types: ['us_bank_account'],
       payment_method_options: {
         us_bank_account: {
-          verification_method: "automatic",
+          verification_method: 'automatic',
         },
       },
     });
@@ -469,6 +486,9 @@ export class StripePayment {
   // end ACH
 
   static handleWebhook(rawBody: string, sig: string | string[]): stripe.Event {
+    if (!STRIPE_WEBHOOK_SECRET) {
+      throw new Error('STRIPE_WEBHOOK_SECRET is not configured in environment variables');
+    }
     const event = Stripe.webhooks.constructEvent(
       rawBody,
       sig,

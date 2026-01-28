@@ -62,58 +62,10 @@ export default () => ({
     },
   },
 
-  subscription: {
-    trialDays: parseInt(process.env.SUBSCRIPTION_TRIAL_DAYS, 10) || 14,
-    gracePeriodDays: parseInt(process.env.SUBSCRIPTION_GRACE_PERIOD_DAYS, 10) || 7,
-    plans: {
-      core: {
-        name: 'Core',
-        features: {
-          maxVideos: parseInt(process.env.SUBSCRIPTION_CORE_MAX_VIDEOS, 10) || 10,
-          maxStorage: parseInt(process.env.SUBSCRIPTION_CORE_MAX_STORAGE_GB, 10) || 50,
-          supportLevel: process.env.SUBSCRIPTION_CORE_SUPPORT_LEVEL || 'basic',
-        },
-      },
-      growth: {
-        name: 'Growth',
-        features: {
-          maxVideos: parseInt(process.env.SUBSCRIPTION_GROWTH_MAX_VIDEOS, 10) || 50,
-          maxStorage: parseInt(process.env.SUBSCRIPTION_GROWTH_MAX_STORAGE_GB, 10) || 200,
-          supportLevel: process.env.SUBSCRIPTION_GROWTH_SUPPORT_LEVEL || 'priority',
-        },
-      },
-      plus: {
-        name: 'Plus',
-        features: {
-          maxVideos: parseInt(process.env.SUBSCRIPTION_PLUS_MAX_VIDEOS, 10) || -1, // -1 for unlimited
-          maxStorage: parseInt(process.env.SUBSCRIPTION_PLUS_MAX_STORAGE_GB, 10) || 1000,
-          supportLevel: process.env.SUBSCRIPTION_PLUS_SUPPORT_LEVEL || 'premium',
-        },
-      },
-    },
-  },
-
   payment: {
     stripe: {
       secret_key: process.env.STRIPE_SECRET_KEY,
       webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
-      prices: {
-        core: {
-          monthly: process.env.STRIPE_PRICE_CORE_MONTHLY,
-          semiannual: process.env.STRIPE_PRICE_CORE_SEMIANNUAL,
-          annual: process.env.STRIPE_PRICE_CORE_ANNUAL,
-        },
-        growth: {
-          monthly: process.env.STRIPE_PRICE_GROWTH_MONTHLY,
-          semiannual: process.env.STRIPE_PRICE_GROWTH_SEMIANNUAL,
-          annual: process.env.STRIPE_PRICE_GROWTH_ANNUAL,
-        },
-        plus: {
-          monthly: process.env.STRIPE_PRICE_PLUS_MONTHLY,
-          semiannual: process.env.STRIPE_PRICE_PLUS_SEMIANNUAL,
-          annual: process.env.STRIPE_PRICE_PLUS_ANNUAL,
-        },
-      },
     },
     paypal: {
       client_id: process.env.PAYPAL_CLIENT_ID,

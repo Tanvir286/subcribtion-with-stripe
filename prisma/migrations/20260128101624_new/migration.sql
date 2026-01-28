@@ -1,6 +1,15 @@
 -- CreateEnum
 CREATE TYPE "UserType" AS ENUM ('ADMIN', 'CLIENT', 'EDITOR');
 
+-- CreateEnum
+CREATE TYPE "SubscriptionStatus" AS ENUM ('TRIALING', 'INACTIVE', 'ACTIVE', 'EXPIRED', 'CANCELED');
+
+-- CreateEnum
+CREATE TYPE "BillingInterval" AS ENUM ('MONTHLY', 'SEMIANNUAL', 'ANNUAL');
+
+-- CreateEnum
+CREATE TYPE "PlanType" AS ENUM ('CORE', 'GROWTH', 'PLUS');
+
 -- CreateTable
 CREATE TABLE "accounts" (
     "id" TEXT NOT NULL,
@@ -39,8 +48,9 @@ CREATE TABLE "users" (
     "billing_id" TEXT,
     "stripe_connect_id" TEXT,
     "balance" DECIMAL(10,2) DEFAULT 0.0,
+    "is_subscribed" BOOLEAN NOT NULL DEFAULT false,
     "type" "UserType" DEFAULT 'CLIENT',
-    "email_verified_at" TIMESTAMP(3),
+    "email_verified_at" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
     "first_name" VARCHAR(255),
     "last_name" VARCHAR(255),
     "domain" TEXT,
@@ -57,6 +67,7 @@ CREATE TABLE "users" (
     "availability" TEXT,
     "is_two_factor_enabled" INTEGER DEFAULT 0,
     "two_factor_secret" TEXT,
+    "stripe_customer_id" TEXT,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -192,6 +203,24 @@ CREATE TABLE "payment_transactions" (
 );
 
 -- CreateTable
+CREATE TABLE "subscriptions" (
+    "id" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMP(3),
+    "stripe_price" TEXT NOT NULL,
+    "plan" "PlanType" NOT NULL,
+    "interval" "BillingInterval" NOT NULL,
+    "status" "SubscriptionStatus" NOT NULL,
+    "current_period_start" TIMESTAMP(3) NOT NULL,
+    "current_period_end" TIMESTAMP(3) NOT NULL,
+    "trial_ends_at" TIMESTAMP(3),
+    "user_id" TEXT,
+
+    CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_PermissionToRole" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -210,6 +239,18 @@ CREATE UNIQUE INDEX "users_domain_key" ON "users"("domain");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
+
+-- CreateIndex
+CREATE INDEX "users_billing_id_idx" ON "users"("billing_id");
+
+-- CreateIndex
+CREATE INDEX "subscriptions_user_id_idx" ON "subscriptions"("user_id");
+
+-- CreateIndex
+CREATE INDEX "subscriptions_status_idx" ON "subscriptions"("status");
+
+-- CreateIndex
+CREATE INDEX "subscriptions_user_id_status_idx" ON "subscriptions"("user_id", "status");
 
 -- CreateIndex
 CREATE INDEX "_PermissionToRole_B_index" ON "_PermissionToRole"("B");
@@ -249,6 +290,9 @@ ALTER TABLE "user_payment_methods" ADD CONSTRAINT "user_payment_methods_user_id_
 
 -- AddForeignKey
 ALTER TABLE "payment_transactions" ADD CONSTRAINT "payment_transactions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_PermissionToRole" ADD CONSTRAINT "_PermissionToRole_A_fkey" FOREIGN KEY ("A") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;

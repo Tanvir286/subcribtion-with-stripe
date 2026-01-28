@@ -301,13 +301,11 @@ model PaymentTransaction {
 // ============================
 
 enum SubscriptionStatus {
-  INCOMPLETE
-  INCOMPLETE_EXPIRED
   TRIALING
+  INACTIVE
   ACTIVE
-  PAST_DUE
+  EXPIRED
   CANCELED
-  UNPAID
 }
 
 enum BillingInterval {
@@ -331,7 +329,7 @@ model Subscription {
   deleted_at DateTime?
 
   // Stripe
-  stripe_price_id        String
+  stripe_price       String
 
   // Plan Info
   plan      PlanType

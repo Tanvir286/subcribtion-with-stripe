@@ -37,10 +37,14 @@ export class StripeController {
   @UseGuards(JwtAuthGuard)
   async createSubscription(@Body() body: any, @Req() req: any) {
     const user = req.user.userId;
+    let metadata: any = {};
 
-    const { plan, interval } = body;
+    let { plan, interval } = body;
 
-    let find_price = await getStripePrice(plan, interval);
+    plan = String(plan).toUpperCase();
+    interval = String(interval).toUpperCase();
+
+    const find_price = await getStripePrice(plan, interval);
 
     if (!find_price) {
       throw new NotFoundException(
@@ -52,21 +56,65 @@ export class StripeController {
       where: { id: user },
     });
 
-    if (!users.billing_id) {
-      throw new NotFoundException('not create stripe account');
+    let customerId = users.billing_id;
+
+    if (!customerId) {
+      const customer = await StripePayment.createCustomer({
+        user_id: user,
+        name: users.name ?? '',
+        email: users.email ?? '',
+      });
+
+      customerId = customer.id;
+
+      await this.prisma.user.update({
+        where: { id: user },
+        data: { billing_id: customerId },
+      });
     }
 
-    const customerId = users.billing_id;
+    const amountInCents = Math.round(Number(find_price) * 100);
 
-    const amountInCents = Math.round(find_price * 100);
+    const periodStart = new Date();
+    const periodEnd = this.addInterval(periodStart, interval);
 
-     
+    const subscription = await this.prisma.subscription.create({
+      data: {
+        user_id: user,
+        stripe_price: find_price.toString(),
+        plan: plan,
+        interval: interval,
+        current_period_start: periodStart,
+        current_period_end: periodEnd,
+        trial_ends_at: null,
+        status: 'INACTIVE',
+      },
+    });
+   
+    metadata = {
+      userId: user,
+      subscriptionId: subscription.id,
+      plan,
+      interval,
+    };
     
+    const paymentIntent = await StripePayment.createPaymentIntent({
+      amount: amountInCents,
+      currency: 'usd',
+      customer_id: customerId,
+      payment_method_types: ['card'],
+      metadata: metadata,
+    });
 
-     
+    console.log('Payment Intent Created:', paymentIntent.id);
 
+    return {
+      success: true,
+      message: 'Payment intent created successfully',
+      client_secret: paymentIntent.client_secret,
+      subscription_id: subscription.id,
+    };
     
-
   }
 
   // Implement subscription creation logic here
@@ -84,16 +132,52 @@ export class StripeController {
 
       const pi = event.data.object as Stripe.PaymentIntent;
       const meta = pi.metadata || {};
+    
+      const subscriptionId = (meta.subscriptionId || meta.subscription_id) as | string | undefined;
 
       switch (event.type) {
-        case 'payment_intent.succeeded':
-          break;
 
-        case 'payment_intent.payment_failed':
-          break;
+        case 'payment_intent.succeeded': {
 
-        case 'payment_intent.canceled':
+          if (!subscriptionId) break;
+
+          const dbSubscription = await this.prisma.subscription.findUnique({
+            where: { id: subscriptionId },
+          });
+
+          if (!dbSubscription) break;
+
+          const start = new Date();
+          const end = this.addInterval(start, dbSubscription.interval);
+
+          await this.prisma.subscription.update({
+            where: { id: subscriptionId },
+            data: {
+              status: 'ACTIVE',
+              current_period_start: start,
+              current_period_end: end,
+            },
+          });
           break;
+        }
+
+        case 'payment_intent.payment_failed': {
+          if (!subscriptionId) break;
+          await this.prisma.subscription.updateMany({
+            where: { id: subscriptionId },
+            data: { status: 'INACTIVE' },
+          });
+          break;
+        }
+
+        case 'payment_intent.canceled': {
+          if (!subscriptionId) break;
+          await this.prisma.subscription.updateMany({
+            where: { id: subscriptionId },
+            data: { status: 'CANCELED' },
+          });
+          break;
+        }
 
         case 'payment_intent.requires_action':
           break;
@@ -112,6 +196,25 @@ export class StripeController {
   // =====================================================================
   // ======================= UTILITY RESPONSE METHODS ===================
   // =====================================================================
+
+  private addInterval(start: Date, interval: string): Date {
+    const end = new Date(start);
+    switch (interval) {
+      case 'MONTHLY':
+        end.setMonth(end.getMonth() + 1);
+        break;
+      case 'SEMIANNUAL':
+        end.setMonth(end.getMonth() + 6);
+        break;
+      case 'ANNUAL':
+        end.setFullYear(end.getFullYear() + 1);
+        break;
+      default:
+        end.setMonth(end.getMonth() + 1);
+        break;
+    }
+    return end;
+  }
 
   private fail(message: string) {
     return { success: false, message };
