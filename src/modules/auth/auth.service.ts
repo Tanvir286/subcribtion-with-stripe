@@ -187,6 +187,7 @@ export class AuthService {
           refresh_token: refreshToken,
         },
         type: user.type,
+        isSubscribed: user.is_subscribed,
       };
     } catch (error) {
       return {

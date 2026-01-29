@@ -56,7 +56,7 @@ export class StripeController {
       where: { id: user },
     });
 
-    if (!users.is_subscribed) {
+    if (users.is_subscribed) {
       throw new ForbiddenException('User is not subscribed');
     }
 
