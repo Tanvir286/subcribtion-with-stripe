@@ -56,6 +56,10 @@ export class StripeController {
       where: { id: user },
     });
 
+    if (!users.is_subscribed) {
+      throw new ForbiddenException('User is not subscribed');
+    }
+
     let customerId = users.billing_id;
 
     if (!customerId) {
@@ -90,14 +94,14 @@ export class StripeController {
         status: 'INACTIVE',
       },
     });
-   
+
     metadata = {
       userId: user,
       subscriptionId: subscription.id,
       plan,
       interval,
     };
-    
+
     const paymentIntent = await StripePayment.createPaymentIntent({
       amount: amountInCents,
       currency: 'usd',
@@ -114,10 +118,7 @@ export class StripeController {
       client_secret: paymentIntent.client_secret,
       subscription_id: subscription.id,
     };
-    
   }
-
-  // Implement subscription creation logic here
 
   @Post('webhook')
   async handleWebhook(
@@ -132,14 +133,14 @@ export class StripeController {
 
       const pi = event.data.object as Stripe.PaymentIntent;
       const meta = pi.metadata || {};
-    
-      const subscriptionId = (meta.subscriptionId || meta.subscription_id) as | string | undefined;
+
+      const subscriptionId = meta.subscriptionId;
+      const userId = meta.userId;
 
       switch (event.type) {
-
         case 'payment_intent.succeeded': {
-
           if (!subscriptionId) break;
+          if (!userId) break;
 
           const dbSubscription = await this.prisma.subscription.findUnique({
             where: { id: subscriptionId },
@@ -150,14 +151,22 @@ export class StripeController {
           const start = new Date();
           const end = this.addInterval(start, dbSubscription.interval);
 
-          await this.prisma.subscription.update({
-            where: { id: subscriptionId },
-            data: {
-              status: 'ACTIVE',
-              current_period_start: start,
-              current_period_end: end,
-            },
+          await this.prisma.$transaction(async (tx) => {
+            await tx.subscription.update({
+              where: { id: subscriptionId },
+              data: {
+                status: 'ACTIVE',
+                current_period_start: start,
+                current_period_end: end,
+              },
+            });
+
+            await tx.user.update({
+              where: { id: userId },
+              data: { is_subscribed: true },
+            });
           });
+
           break;
         }
 
