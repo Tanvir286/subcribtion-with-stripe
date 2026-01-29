@@ -5,6 +5,7 @@ import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { RedisModule } from '@nestjs-modules/ioredis';
+import { ScheduleModule as NestScheduleModule } from '@nestjs/schedule';
 
 // internal imports
 import appConfig from './config/app.config';
@@ -21,6 +22,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { PrometheusModule } from './prometheus/prometheus.module';
 import { RepositoryModule } from './common/repository/repository.module';
+import { ScheduleModule } from './schedule/schedule.module';
 
 @Module({
   imports: [
@@ -48,27 +50,11 @@ import { RepositoryModule } from './common/repository/repository.module';
         port: +appConfig().redis.port,
       },
     }),
-    // disabling throttling for dev
-    // ThrottlerModule.forRoot([
-    //   {
-    //     name: 'short',
-    //     ttl: 1000,
-    //     limit: 3,
-    //   },
-    //   {
-    //     name: 'medium',
-    //     ttl: 10000,
-    //     limit: 20,
-    //   },
-    //   {
-    //     name: 'long',
-    //     ttl: 60000,
-    //     limit: 100,
-    //   },
-    // ]),
-    // General modules
+    NestScheduleModule.forRoot(),
+    
     PrismaModule,
     RepositoryModule,
+    ScheduleModule,
     AuthModule,
     AbilityModule,
     MailModule,
@@ -79,15 +65,6 @@ import { RepositoryModule } from './common/repository/repository.module';
   ],
   controllers: [AppController],
   providers: [
-    // disabling throttling for dev
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: ThrottlerGuard,
-    // },
-    // disbling throttling for dev {
-    //   provide: APP_GUARD,
-    //   useClass: ThrottlerBehindProxyGuard,
-    // },
     AppService,
   ],
 })

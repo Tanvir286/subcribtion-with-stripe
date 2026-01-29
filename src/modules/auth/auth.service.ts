@@ -2,7 +2,7 @@
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import Redis from 'ioredis';
+import type Redis from 'ioredis';
 
 //internal imports
 import { DateHelper } from '../../common/helper/date.helper';
@@ -175,7 +175,7 @@ export class AuthService {
         `refresh_token:${user.id}`,
         refreshToken,
         'EX',
-        60 * 60 * 24 * 7, 
+        60 * 60 * 24 * 7,
       );
 
       return {
