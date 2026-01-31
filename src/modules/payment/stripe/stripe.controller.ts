@@ -56,9 +56,9 @@ export class StripeController {
       where: { id: user },
     });
 
-    if (users.is_subscribed) {
-      throw new ForbiddenException('User is not subscribed');
-    }
+    // if (users.is_subscribed) {
+    //   throw new ForbiddenException('User is  subscribed');
+    // }
 
     let customerId = users.billing_id;
 
@@ -90,7 +90,6 @@ export class StripeController {
         interval: interval,
         current_period_start: periodStart,
         current_period_end: periodEnd,
-        trial_ends_at: null,
         status: 'INACTIVE',
       },
     });

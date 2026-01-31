@@ -178,7 +178,7 @@ export class AuthService {
         60 * 60 * 24 * 7,
       );
 
-      return {
+      const response: any = {
         success: true,
         message: 'Logged in successfully',
         authorization: {
@@ -188,7 +188,56 @@ export class AuthService {
         },
         type: user.type,
         isSubscribed: user.is_subscribed,
+        isTrial: user.is_trial,
       };
+
+      // If user has active subscription, include subscription details
+      if (user.is_subscribed) {
+        const subscription = await this.prisma.subscription.findFirst({
+          where: {
+            user_id: userId,
+            status: 'ACTIVE',
+          },
+          select: {
+            plan: true,
+            interval: true,
+            current_period_end: true,
+          },
+        });
+
+        if (subscription) {
+          response.subscription = {
+            plan: subscription.plan,
+            interval: subscription.interval,
+            current_period_end: subscription.current_period_end,
+          };
+        }
+      }
+
+      // If user has active trial, include trial details
+      if (user.is_trial) {
+        const trial = await this.prisma.freeTrial.findFirst({
+          where: {
+            user_id: userId,
+            status: 'ACTIVE',
+          },
+          select: {
+            plan: true,
+            interval: true,
+            current_period_end: true,
+          },
+        });
+
+        if (trial) {
+          response.trial = {
+            plan: trial.plan,
+            interval: trial.interval,
+            current_period_end: trial.current_period_end,
+          };
+        }
+      }
+
+      return response;
     } catch (error) {
       return {
         success: false,

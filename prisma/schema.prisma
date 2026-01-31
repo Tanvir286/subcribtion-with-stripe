@@ -79,6 +79,10 @@ model User {
   // subscribe
   is_subscribed Boolean @default(false)
 
+  // isTrial
+  is_trial      Boolean @default(false)
+  trials_used   Boolean @default(false)
+
   // Auth & Type
   type              UserType? @default(CLIENT)
   email_verified_at DateTime? @default(now())
@@ -116,6 +120,7 @@ model User {
   role_users             RoleUser[]
   payment_transactions   PaymentTransaction[]
   subscriptions          Subscription[]
+  user_trials           FreeTrial[]
   
   @@index([billing_id])
   @@map("users")
@@ -340,7 +345,6 @@ model Subscription {
   current_period_start DateTime
   current_period_end   DateTime
 
-  trial_ends_at        DateTime?
 
   // Relations
   user_id String?
@@ -352,4 +356,31 @@ model Subscription {
   @@map("subscriptions")
 }
 
+
+enum TrialStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+model FreeTrial {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  plan      PlanType
+  interval  BillingInterval
+  status    TrialStatus
+
+  // Dates
+  current_period_start DateTime
+  current_period_end   DateTime
+
+  // Relations
+  user_id String?
+  user    User? @relation(fields: [user_id], references: [id])
+
+  @@map("free_trials")
+} 
 
