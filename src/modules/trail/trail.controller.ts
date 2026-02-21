@@ -21,6 +21,7 @@ export class TrailController {
     return this.trailService.create(createTrialDto, userId);
   }
  
+  //
 
 
 

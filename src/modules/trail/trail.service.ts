@@ -57,4 +57,6 @@ export class TrailService {
       data: trial,
     };
   }
+
+  
 }

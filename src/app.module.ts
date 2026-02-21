@@ -24,6 +24,7 @@ import { PrometheusModule } from './prometheus/prometheus.module';
 import { RepositoryModule } from './common/repository/repository.module';
 import { ScheduleModule } from './schedule/schedule.module';
 import { TrailModule } from './modules/trail/trail.module';
+import { PlanModule } from './modules/plan/plan.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { TrailModule } from './modules/trail/trail.module';
     PaymentModule,
     PrometheusModule,
     TrailModule,
+    PlanModule,
   ],
   controllers: [AppController],
   providers: [
