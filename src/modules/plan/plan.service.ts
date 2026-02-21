@@ -55,6 +55,7 @@ export class PlanService {
 
     return {
       success: true,
+      message: 'Plans retrieved successfully',
       data: plans,
     };
   }
