@@ -73,6 +73,7 @@ export async function handleExpiry(
         data: {
           is_trial: false,
           trials_used: true,
+          is_subscribed: false,
         },
       });
     }

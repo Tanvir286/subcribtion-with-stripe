@@ -48,7 +48,7 @@ export class TrailService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { is_trial: true },
+      data: { is_trial: true, is_subscribed: true },
     });
 
     return {

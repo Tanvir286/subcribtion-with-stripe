@@ -403,3 +403,5 @@ model Plan {
 
   @@map("plans")
 }
+
+
