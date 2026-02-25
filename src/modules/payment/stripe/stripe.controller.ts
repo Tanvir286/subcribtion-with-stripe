@@ -56,6 +56,10 @@ export class StripeController {
       where: { id: user },
     });
 
+    if (!users) {
+      throw new NotFoundException('User not found');
+    }
+
     // if (users.is_subscribed) {
     //   throw new ForbiddenException('User is  subscribed');
     // }
