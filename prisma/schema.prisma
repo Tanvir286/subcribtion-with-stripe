@@ -332,7 +332,6 @@ model SubscriptionPlan {
 
   plan            PlanType
   interval        BillingInterval
-  status          SubscriptionStatus
 
   price           Decimal?
 
