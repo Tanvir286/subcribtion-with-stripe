@@ -324,6 +324,21 @@ enum PlanType {
   PLUS
 }
 
+model SubscriptionPlan {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  plan            PlanType
+  interval        BillingInterval
+  status          SubscriptionStatus
+
+  price           Decimal?
+
+  @@map("subscription_plans")
+}
+
 model Subscription {
   id         String    @id @default(cuid())
   created_at DateTime  @default(now())
@@ -379,12 +394,11 @@ model FreeTrial {
   @@map("free_trials")
 }
 
-
 enum COMType {
-  LAUNCH   
-  CORE     
-  CREATOR  
-  STUDIO  
+  LAUNCH
+  CORE
+  CREATOR
+  STUDIO
 }
 
 model Plan {
@@ -395,13 +409,11 @@ model Plan {
 
   type COMType @unique @default(LAUNCH)
 
-  per_video         Int     @default(0)
-  unlimited_videos  Boolean @default(false)
-  branding          Boolean @default(false)
-  custom_thumbnail  Boolean @default(false)
-  seo_optimization  Int     @default(0)
+  per_video        Int     @default(0)
+  unlimited_videos Boolean @default(false)
+  branding         Boolean @default(false)
+  custom_thumbnail Boolean @default(false)
+  seo_optimization Int     @default(0)
 
   @@map("plans")
 }
-
-
